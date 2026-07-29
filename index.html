@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENTER THE SPIDER-VERSE</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bowlby+One&family=Space+Grotesk:wght@300;400;500;600;700&family=Bungee+Shade&display=swap" rel="stylesheet">
+
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<style>
+:root {
+  --bg: #0a0a0f; --bg-deep: #050507;
+  --crimson: #ff003c; --crimson-glow: #ff2d5f;
+  --blue: #00d4ff; --blue-glow: #4de8ff;
+  --purple: #b026ff; --purple-glow: #c850ff;
+  --yellow: #ffea00; --white: #ffffff; --paper: #f4f1e8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html, body { background: var(--bg-deep); color: var(--white); font-family: 'Space Grotesk', sans-serif; overflow-x: hidden; cursor: none; }
+@media (pointer: coarse) { html, body { cursor: auto; } .cursor-dot, .cursor-ring { display: none; } }
+.font-display { font-family: 'Bungee', sans-serif; }
+
+.cursor-dot { position: fixed; width: 6px; height: 6px; background: var(--crimson); border-radius: 50%; pointer-events: none; z-index: 10000; mix-blend-mode: difference; transform: translate(-50%, -50%); }
+.cursor-ring { position: fixed; width: 40px; height: 40px; border: 2px solid var(--blue); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), width 0.3s, height 0.3s, border-color 0.3s, background 0.3s; }
+.cursor-ring.hover-active { width: 80px; height: 80px; border-color: var(--crimson); background: rgba(255, 0, 60, 0.1); }
+#web-trail-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9998; }
+
+.loader { position: fixed; inset: 0; z-index: 10001; background: var(--bg-deep); display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.6s, transform 0.8s; }
+.loader.hidden { opacity: 0; pointer-events: none; transform: scale(1.1); }
+.loader-burst { position: absolute; inset: 0; background: radial-gradient(circle at center, var(--crimson) 0%, transparent 30%); opacity: 0; }
+.loader-text { font-family: 'Bungee', sans-serif; font-size: clamp(2rem, 8vw, 5rem); letter-spacing: 0.1em; background: linear-gradient(90deg, var(--crimson), var(--purple), var(--blue)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; position: relative; z-index: 2; }
+.loader-progress { margin-top: 2rem; width: 280px; height: 4px; background: rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+.loader-progress::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: var(--progress, 0%); background: linear-gradient(90deg, var(--crimson), var(--blue)); transition: width 0.3s; }
+.loader-percent { margin-top: 1rem; font-family: 'Bungee', sans-serif; font-size: 0.875rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.6); }
+
+#three-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+.noise-overlay { position: fixed; inset: 0; z-index: 9990; pointer-events: none; opacity: 0.08; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.halftone-overlay { position: fixed; inset: 0; z-index: 9989; pointer-events: none; opacity: 0.12; mix-blend-mode: multiply; background-image: radial-gradient(circle, rgba(0,0,0,0.6) 1px, transparent 1.5px); background-size: 6px 6px; }
+.vignette { position: fixed; inset: 0; z-index: 9988; pointer-events: none; background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%); }
+.scanline { position: fixed; inset: 0; z-index: 9987; pointer-events: none; opacity: 0.05; background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px); }
+
+.title-wrap { position: relative; display: inline-block; }
+.title-main { font-family: 'Bungee', sans-serif; font-size: clamp(2.5rem, 11vw, 9rem); color: var(--white); position: relative; z-index: 3; letter-spacing: 0.02em; line-height: 0.9; text-shadow: 0 0 60px rgba(176, 38, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.3); }
+.title-glitch { position: absolute; inset: 0; font-family: 'Bungee', sans-serif; font-size: clamp(2.5rem, 11vw, 9rem); letter-spacing: 0.02em; line-height: 0.9; pointer-events: none; z-index: 2; }
+.title-glitch.r { color: var(--crimson); mix-blend-mode: screen; animation: glitch-r 3.5s infinite steps(1); }
+.title-glitch.b { color: var(--blue); mix-blend-mode: screen; animation: glitch-b 3.5s infinite steps(1); }
+@keyframes glitch-r { 0%, 80%, 100% { transform: translate(0); clip-path: inset(0 0 0 0); } 82% { transform: translate(-6px, 2px); clip-path: inset(10% 0 60% 0); } 84% { transform: translate(4px, -3px); clip-path: inset(50% 0 20% 0); } 86% { transform: translate(-3px, 1px); clip-path: inset(30% 0 40% 0); } 88% { transform: translate(0); clip-path: inset(0 0 0 0); } }
+@keyframes glitch-b { 0%, 80%, 100% { transform: translate(0); clip-path: inset(0 0 0 0); } 83% { transform: translate(5px, -2px); clip-path: inset(40% 0 30% 0); } 85% { transform: translate(-4px, 3px); clip-path: inset(20% 0 50% 0); } 87% { transform: translate(2px, -1px); clip-path: inset(60% 0 10% 0); } 89% { transform: translate(0); clip-path: inset(0 0 0 0); } }
+.title-halftone { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,234,0,0.4) 1px, transparent 1.5px); background-size: 4px 4px; mix-blend-mode: overlay; pointer-events: none; z-index: 4; opacity: 0.6; }
+
+.cta-button { position: relative; padding: 1.25rem 3rem; background: var(--crimson); color: var(--white); font-family: 'Bungee', sans-serif; font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase; border: 3px solid var(--white); cursor: none; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), background 0.3s; box-shadow: 6px 6px 0 var(--purple), 12px 12px 0 var(--blue); overflow: visible; z-index: 10; }
+.cta-button::before { content: ''; position: absolute; inset: -20px; background: radial-gradient(circle, rgba(0,212,255,0.6) 0%, transparent 60%); opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: -1; }
+.cta-button:hover { background: var(--purple); transform: scale(1.08); box-shadow: 6px 6px 0 var(--blue), 12px 12px 0 var(--crimson); }
+.cta-button:hover::before { opacity: 1; }
+.cta-web { position: absolute; inset: -30px; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+.cta-button:hover .cta-web { opacity: 1; }
+
+.speech-bubble { position: relative; display: inline-block; background: var(--white); color: var(--bg); padding: 0.75rem 1.5rem; border-radius: 24px; font-family: 'Bungee', sans-serif; font-size: 1rem; border: 3px solid var(--bg); box-shadow: 4px 4px 0 var(--crimson); }
+.speech-bubble::after { content: ''; position: absolute; bottom: -16px; left: 30px; width: 0; height: 0; border: 10px solid transparent; border-top-color: var(--white); border-bottom: 0; filter: drop-shadow(3px 3px 0 var(--crimson)); }
+
+.comic-burst { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 200px; height: 200px; }
+.comic-burst svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(4px 4px 0 var(--bg)); }
+.comic-burst span { position: relative; z-index: 2; font-family: 'Bungee', sans-serif; font-size: 1.5rem; color: var(--white); text-shadow: 2px 2px 0 var(--bg); transform: rotate(-8deg); }
+
+.comic-panel { position: relative; background: var(--bg); border: 4px solid var(--white); box-shadow: 8px 8px 0 var(--crimson); overflow: hidden; padding: 2rem; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+.comic-panel:nth-child(2) { box-shadow: 8px 8px 0 var(--blue); }
+.comic-panel:nth-child(3) { box-shadow: 8px 8px 0 var(--purple); }
+.comic-panel:nth-child(4) { box-shadow: 8px 8px 0 var(--yellow); }
+.comic-panel:nth-child(5) { box-shadow: 8px 8px 0 var(--crimson); }
+.comic-panel:nth-child(6) { box-shadow: 8px 8px 0 var(--blue); }
+.comic-panel:hover { transform: translate(-4px, -4px) rotate(-1deg); }
+.panel-halftone { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1.5px); background-size: 8px 8px; pointer-events: none; opacity: 0.4; }
+
+.speed-lines { position: absolute; inset: 0; pointer-events: none; background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 3deg, rgba(255,255,255,0.08) 3deg, rgba(255,255,255,0.08) 4deg); mask-image: radial-gradient(circle, transparent 10%, black 60%); -webkit-mask-image: radial-gradient(circle, transparent 10%, black 60%); animation: spin 20s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+section { position: relative; min-height: 100vh; z-index: 10; }
+.section-content { position: relative; z-index: 10; }
+
+.audio-toggle { position: fixed; top: 1.5rem; right: 1.5rem; width: 50px; height: 50px; background: rgba(10, 10, 15, 0.6); backdrop-filter: blur(10px); border: 2px solid var(--white); border-radius: 50%; z-index: 100; display: flex; align-items: center; justify-content: center; transition: all 0.3s; cursor: none; }
+.audio-toggle:hover { background: var(--crimson); transform: scale(1.1) rotate(15deg); }
+.audio-toggle.muted .icon-on { display: none; }
+.audio-toggle:not(.muted) .icon-off { display: none; }
+
+.progress-bar { position: fixed; top: 0; left: 0; height: 4px; background: linear-gradient(90deg, var(--crimson), var(--purple), var(--blue)); z-index: 100; width: 0%; box-shadow: 0 0 10px var(--crimson); }
+
+.side-nav { position: fixed; right: 1.5rem; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; gap: 1rem; }
+.nav-dot { width: 12px; height: 12px; border: 2px solid var(--white); border-radius: 50%; cursor: none; transition: all 0.3s; position: relative; }
+.nav-dot.active { background: var(--crimson); box-shadow: 0 0 15px var(--crimson); transform: scale(1.3); }
+.nav-dot::before { content: attr(data-label); position: absolute; right: 24px; top: 50%; transform: translateY(-50%); font-family: 'Bungee', sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.nav-dot:hover::before { opacity: 1; }
+
+.brand-mark { position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; font-family: 'Bungee', sans-serif; font-size: 0.875rem; letter-spacing: 0.2em; display: flex; align-items: center; gap: 0.5rem; }
+.brand-mark .dot { width: 10px; height: 10px; background: var(--crimson); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+
+.scroll-hint { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); font-family: 'Bungee', sans-serif; font-size: 0.75rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.6); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; animation: scroll-bounce 2s infinite; }
+.scroll-hint .line { width: 2px; height: 30px; background: linear-gradient(180deg, transparent, var(--crimson)); }
+@keyframes scroll-bounce { 0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.7; } 50% { transform: translateX(-50%) translateY(8px); opacity: 1; } }
+
+@keyframes float-y { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-15px) rotate(2deg); } }
+.float-anim { animation: float-y 6s ease-in-out infinite; }
+
+.glow-text { text-shadow: 0 0 20px var(--crimson), 0 0 40px var(--crimson), 0 0 80px var(--purple); }
+
+@media (max-width: 768px) { .side-nav { display: none; } .comic-burst { width: 140px; height: 140px; } .comic-burst span { font-size: 1rem; } }
+::selection { background: var(--crimson); color: var(--white); }
+::-webkit-scrollbar { width: 0; }
+
+.section-num { font-family: 'Bungee Shade', sans-serif; font-size: clamp(8rem, 20vw, 16rem); color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,0.08); position: absolute; pointer-events: none; line-height: 0.8; }
+.action-lines { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(45deg, transparent 0px, transparent 8px, rgba(255, 0, 60, 0.15) 8px, rgba(255, 0, 60, 0.15) 9px); mix-blend-mode: screen; opacity: 0.5; }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="loader-burst" id="loader-burst"></div>
+  <div class="loader-text">ENTER THE VERSE</div>
+  <div class="loader-progress"><div></div></div>
+  <div class="loader-percent" id="loader-percent">00%</div>
+</div>
+
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+<canvas id="web-trail-canvas"></canvas>
+
+<div class="noise-overlay"></div>
+<div class="halftone-overlay"></div>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<canvas id="three-canvas"></canvas>
+<div class="progress-bar" id="progress-bar"></div>
+
+<div class="brand-mark">
+  <span class="dot"></span>
+  <span>VERSE / 2099</span>
+</div>
+
+<button class="audio-toggle muted" id="audio-toggle" aria-label="Toggle sound">
+  <svg class="icon-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+  <svg class="icon-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+</button>
+
+<nav class="side-nav" id="side-nav">
+  <div class="nav-dot active" data-section="0" data-label="ENTER"></div>
+  <div class="nav-dot" data-section="1" data-label="THREADS"></div>
+  <div class="nav-dot" data-section="2" data-label="PANELS"></div>
+  <div class="nav-dot" data-section="3" data-label="SKIES"></div>
+  <div class="nav-dot" data-section="4" data-label="BEYOND"></div>
+</nav>
+
+<main>
+  <section class="hero-section relative flex flex-col items-center justify-center" id="section-0">
+    <div class="section-content text-center px-6">
+      <div class="mb-8 flex justify-center"><div class="speech-bubble float-anim">A CINEMATIC WEB EXPERIENCE</div></div>
+      <div class="title-wrap mb-6">
+        <h1 class="title-main" data-text="ENTER THE">ENTER THE</h1>
+        <div class="title-glitch r" data-text="ENTER THE">ENTER THE</div>
+        <div class="title-glitch b" data-text="ENTER THE">ENTER THE</div>
+        <div class="title-halftone"></div>
+      </div>
+      <div class="title-wrap mb-10">
+        <h1 class="title-main" data-text="SPIDER-VERSE" style="color: var(--crimson); -webkit-text-stroke: 2px var(--white);">SPIDER-VERSE</h1>
+        <div class="title-glitch r" data-text="SPIDER-VERSE">SPIDER-VERSE</div>
+        <div class="title-glitch b" data-text="SPIDER-VERSE">SPIDER-VERSE</div>
+        <div class="title-halftone"></div>
+      </div>
+      <p class="text-lg md:text-xl mb-12 max-w-2xl mx-auto text-white/80 font-light tracking-wide">Dive into a living comic-book universe where every thread pulses with energy, every panel breathes, and every scroll bends reality.</p>
+      <button class="cta-button magnetic" id="hero-cta">
+        <svg class="cta-web" viewBox="0 0 200 100" preserveAspectRatio="none"><g stroke="rgba(255,255,255,0.6)" stroke-width="0.5" fill="none"><line x1="0" y1="50" x2="200" y2="50"/><line x1="0" y1="20" x2="200" y2="80"/><line x1="0" y1="80" x2="200" y2="20"/><line x1="50" y1="0" x2="150" y2="100"/><line x1="150" y1="0" x2="50" y2="100"/></g></svg>
+        Begin the Journey
+      </button>
+    </div>
+    <div class="scroll-hint"><span>SCROLL</span><div class="line"></div></div>
+    <div class="section-num" style="top: 10%; right: 5%;">01</div>
+  </section>
+
+  <section class="web-section relative flex items-center" id="section-1">
+    <div class="section-content max-w-7xl mx-auto px-6 py-20 w-full">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <div class="speech-bubble mb-6" style="background: var(--blue); color: var(--white);">CHAPTER 02</div>
+          <h2 class="font-display text-5xl md:text-7xl mb-6 leading-none" style="text-shadow: 4px 4px 0 var(--purple);">THREADS<br/>OF FATE</h2>
+          <p class="text-lg text-white/70 mb-8 leading-relaxed">Thousands of procedural web strands react to your every movement. Wind pulses through the lattice, light dances across each thread, and the entire network breathes with a life of its own.</p>
+          <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="border-2 border-white/20 p-4"><div class="font-display text-3xl" style="color: var(--crimson);">2K+</div><div class="text-xs text-white/60 mt-1">WEB STRANDS</div></div>
+            <div class="border-2 border-white/20 p-4"><div class="font-display text-3xl" style="color: var(--blue);">60</div><div class="text-xs text-white/60 mt-1">FPS TARGET</div></div>
+            <div class="border-2 border-white/20 p-4"><div class="font-display text-3xl" style="color: var(--purple);">∞</div><div class="text-xs text-white/60 mt-1">VARIATIONS</div></div>
+          </div>
+          <div class="comic-burst float-anim" style="margin-top: 2rem;"><svg viewBox="0 0 200 200"><polygon points="100,5 115,75 185,75 130,115 150,185 100,145 50,185 70,115 15,75 85,75" fill="var(--yellow)" stroke="var(--bg)" stroke-width="4"/></svg><span>THWIP!</span></div>
+        </div>
+        <div class="relative">
+          <div class="comic-panel" style="background: linear-gradient(135deg, var(--bg) 0%, rgba(176,38,255,0.1) 100%);">
+            <div class="panel-halftone"></div><div class="speed-lines"></div>
+            <div class="relative z-10 p-8">
+              <div class="text-xs tracking-widest mb-4" style="color: var(--blue);">SIMULATION ACTIVE</div>
+              <div class="font-display text-2xl mb-4">REAL-TIME PHYSICS</div>
+              <p class="text-white/60 text-sm leading-relaxed mb-6">GPU-accelerated vertex shaders animate every strand. Move your cursor and watch the web respond.</p>
+              <div class="flex gap-2"><div class="h-1 flex-1" style="background: linear-gradient(90deg, transparent, var(--crimson), transparent);"></div><div class="h-1 flex-1" style="background: linear-gradient(90deg, transparent, var(--blue), transparent);"></div><div class="h-1 flex-1" style="background: linear-gradient(90deg, transparent, var(--purple), transparent);"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section-num" style="bottom: 5%; left: 5%;">02</div>
+  </section>
+
+  <section class="panels-section relative py-32" id="section-2">
+    <div class="section-content max-w-7xl mx-auto px-6">
+      <div class="text-center mb-20">
+        <div class="speech-bubble mb-6" style="background: var(--purple); color: var(--white);">CHAPTER 03</div>
+        <h2 class="font-display text-5xl md:text-8xl leading-none mb-4" style="text-shadow: 4px 4px 0 var(--blue);">PANELS OF<br/>REALITY</h2>
+        <p class="text-lg text-white/60 max-w-xl mx-auto">Six dimensions of design. Each one a window into a different facet of the experience.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8" id="panels-grid">
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--crimson);">01</div><h3 class="font-display text-xl mb-3">INK & PIXELS</h3><p class="text-white/60 text-sm">Halftone textures meet infinite resolution. Every dot is deliberate, every pixel placed with purpose.</p></div></div>
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="speed-lines"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--blue);">02</div><h3 class="font-display text-xl mb-3">WEB PHYSICS</h3><p class="text-white/60 text-sm">Procedural strands respond to cursor force. Wind simulation creates organic, living motion.</p></div></div>
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--purple);">03</div><h3 class="font-display text-xl mb-3">DIMENSIONAL DRIFT</h3><p class="text-white/60 text-sm">Camera flies through impossible spaces. Parallax layers fold into one another seamlessly.</p></div></div>
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="action-lines"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--yellow);">04</div><h3 class="font-display text-xl mb-3">CITY PULSE</h3><p class="text-white/60 text-sm">A skyline that breathes. Thousands of windows flicker with their own rhythm and color.</p></div></div>
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--crimson);">05</div><h3 class="font-display text-xl mb-3">CHROMATIC SHIFT</h3><p class="text-white/60 text-sm">RGB splits and chromatic aberration fracture reality. Glitches become gateways.</p></div></div>
+        <div class="comic-panel panel-item"><div class="panel-halftone"></div><div class="speed-lines"></div><div class="relative z-10"><div class="font-display text-5xl mb-3" style="color: var(--blue);">06</div><h3 class="font-display text-xl mb-3">STEP BEYOND</h3><p class="text-white/60 text-sm">The final threshold awaits. What lies beyond is yours to discover.</p></div></div>
+      </div>
+    </div>
+    <div class="section-num" style="top: 5%; right: 5%;">03</div>
+  </section>
+
+  <section class="multiverse-section relative flex items-center" id="section-3">
+    <div class="section-content max-w-7xl mx-auto px-6 py-20 w-full">
+      <div class="grid md:grid-cols-2 gap-16 items-center">
+        <div class="order-2 md:order-1">
+          <div class="speech-bubble mb-6" style="background: var(--yellow); color: var(--bg);">CHAPTER 04</div>
+          <h2 class="font-display text-5xl md:text-7xl mb-6 leading-none" style="text-shadow: 4px 4px 0 var(--crimson);">SKIES<br/>ALIGN</h2>
+          <p class="text-lg text-white/70 mb-8 leading-relaxed">Buildings rotate in 3D space as text assembles itself character by character. The multiverse collapses into a single moment of clarity.</p>
+          <div class="space-y-4 mb-8">
+            <div class="flex items-center gap-4"><div class="w-12 h-12 border-2 border-white flex items-center justify-center font-display" style="color: var(--crimson);">A</div><div><div class="font-display text-sm tracking-wider">ARCHITECTURE</div><div class="text-white/50 text-sm">Procedural city generation</div></div></div>
+            <div class="flex items-center gap-4"><div class="w-12 h-12 border-2 border-white flex items-center justify-center font-display" style="color: var(--blue);">B</div><div><div class="font-display text-sm tracking-wider">BLOOM</div><div class="text-white/50 text-sm">Cinematic post-processing</div></div></div>
+            <div class="flex items-center gap-4"><div class="w-12 h-12 border-2 border-white flex items-center justify-center font-display" style="color: var(--purple);">C</div><div><div class="font-display text-sm tracking-wider">CHROMA</div><div class="text-white/50 text-sm">RGB channel separation</div></div></div>
+          </div>
+        </div>
+        <div class="order-1 md:order-2 relative">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="comic-panel float-anim" style="animation-delay: 0s;"><div class="font-display text-4xl mb-2" style="color: var(--crimson);">2099</div><div class="text-xs text-white/60 tracking-widest">DIMENSION</div></div>
+            <div class="comic-panel float-anim" style="animation-delay: 1s; margin-top: 2rem;"><div class="font-display text-4xl mb-2" style="color: var(--blue);">∞</div><div class="text-xs text-white/60 tracking-widest">POSSIBILITY</div></div>
+            <div class="comic-panel float-anim" style="animation-delay: 2s; margin-top: -1rem;"><div class="font-display text-4xl mb-2" style="color: var(--purple);">∆</div><div class="text-xs text-white/60 tracking-widest">DELTA</div></div>
+            <div class="comic-panel float-anim" style="animation-delay: 1.5s;"><div class="font-display text-4xl mb-2" style="color: var(--yellow);">★</div><div class="text-xs text-white/60 tracking-widest">SIGNAL</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section-num" style="bottom: 5%; left: 5%;">04</div>
+  </section>
+
+  <section class="final-section relative flex items-center justify-center" id="section-4">
+    <div class="section-content text-center px-6">
+      <div class="mb-8 flex justify-center"><div class="comic-burst float-anim"><svg viewBox="0 0 200 200"><polygon points="100,5 115,75 185,75 130,115 150,185 100,145 50,185 70,115 15,75 85,75" fill="var(--crimson)" stroke="var(--white)" stroke-width="4"/></svg><span>BOOM!</span></div></div>
+      <div class="title-wrap mb-6">
+        <h2 class="title-main glow-text" data-text="STEP BEYOND" style="font-size: clamp(3rem, 14vw, 11rem);">STEP BEYOND</h2>
+        <div class="title-glitch r" data-text="STEP BEYOND" style="font-size: clamp(3rem, 14vw, 11rem);">STEP BEYOND</div>
+        <div class="title-glitch b" data-text="STEP BEYOND" style="font-size: clamp(3rem, 14vw, 11rem);">STEP BEYOND</div>
+      </div>
+      <p class="text-lg md:text-xl mb-12 max-w-2xl mx-auto text-white/80">You've reached the edge. The verse is calling. Will you answer?</p>
+      <button class="cta-button magnetic" id="final-cta">
+        <svg class="cta-web" viewBox="0 0 200 100" preserveAspectRatio="none"><g stroke="rgba(255,255,255,0.6)" stroke-width="0.5" fill="none"><line x1="0" y1="50" x2="200" y2="50"/><line x1="0" y1="20" x2="200" y2="80"/><line x1="0" y1="80" x2="200" y2="20"/></g></svg>
+        Enter Now
+      </button>
+      <div class="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+        <div><div class="font-display text-3xl" style="color: var(--crimson);">5</div><div class="text-xs text-white/50 tracking-widest mt-1">CHAPTERS</div></div>
+        <div><div class="font-display text-3xl" style="color: var(--blue);">2K+</div><div class="text-xs text-white/50 tracking-widest mt-1">STRANDS</div></div>
+        <div><div class="font-display text-3xl" style="color: var(--purple);">100</div><div class="text-xs text-white/50 tracking-widest mt-1">BUILDINGS</div></div>
+        <div><div class="font-display text-3xl" style="color: var(--yellow);">∞</div><div class="text-xs text-white/50 tracking-widest mt-1">PARTICLES</div></div>
+      </div>
+    </div>
+    <div class="section-num" style="top: 5%; right: 5%;">05</div>
+  </section>
+
+  <footer class="relative py-12 border-t border-white/10 z-10">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="font-display text-sm tracking-widest">VERSE / 2099 — ORIGINAL EXPERIENCE</div>
+      <div class="text-xs text-white/40">No copyrighted characters. No logos. Just pure design energy.</div>
+    </div>
+  </footer>
+</main>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+const state = { mouse: new THREE.Vector2(0, 0), mouseWorld: new THREE.Vector3(0, 0, 0), scroll: 0, time: 0, isMobile: window.innerWidth < 768 };
+
+const canvas = document.getElementById('three-canvas');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050507, 0.012);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 25, 100);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !state.isMobile, alpha: true, powerPreference: 'high-performance' });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const ambientLight = new THREE.AmbientLight(0x1a1a2e, 0.5); scene.add(ambientLight);
+const crimsonLight = new THREE.PointLight(0xff003c, 2, 200); crimsonLight.position.set(-50, 40, 0); scene.add(crimsonLight);
+const blueLight = new THREE.PointLight(0x00d4ff, 2, 200); blueLight.position.set(50, 40, 0); scene.add(blueLight);
+const purpleLight = new THREE.PointLight(0xb026ff, 1.5, 150); purpleLight.position.set(0, 60, -50); scene.add(purpleLight);
+
+const cityGroup = new THREE.Group(); scene.add(cityGroup);
+const buildingColors = [new THREE.Color(0xff003c), new THREE.Color(0x00d4ff), new THREE.Color(0xb026ff), new THREE.Color(0xffea00), new THREE.Color(0xffffff)];
+
+const buildingMaterial = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0 }, baseColor: { value: new THREE.Color(0x0a0a0f) }, accentColor: { value: new THREE.Color(0xff003c) }, fogColor: { value: new THREE.Color(0x050507) }, fogDensity: { value: 0.012 } },
+  vertexShader: `varying vec2 vUv; varying vec3 vWorldPos; void main() { vUv = uv; vec4 worldPos = modelMatrix * vec4(position, 1.0); vWorldPos = worldPos.xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float time; uniform vec3 baseColor; uniform vec3 accentColor; uniform vec3 fogColor; uniform float fogDensity; varying vec2 vUv; varying vec3 vWorldPos; float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); } void main() { vec2 grid = vUv * vec2(6.0, 14.0); vec2 cellId = floor(grid); vec2 cellUv = fract(grid) - 0.5; float windowMask = step(0.15, abs(cellUv.x)) + step(0.2, abs(cellUv.y)); float window = 1.0 - windowMask; float litRandom = hash(cellId); float lit = step(0.55, litRandom); float flicker = sin(time * 1.5 + litRandom * 100.0) * 0.5 + 0.5; flicker = mix(0.7, 1.0, flicker); vec3 winColor = mix(accentColor, vec3(1.0, 0.9, 0.5), step(0.7, litRandom)); vec3 buildingColor = mix(baseColor * 0.5, baseColor, vUv.y); vec3 finalColor = mix(buildingColor, winColor * flicker, window * lit); float topGlow = smoothstep(0.95, 1.0, vUv.y); finalColor += accentColor * topGlow * 0.5; float dist = length(vWorldPos - cameraPosition); float fogFactor = 1.0 - exp(-fogDensity * dist); finalColor = mix(finalColor, fogColor, fogFactor); gl_FragColor = vec4(finalColor, 1.0); }`,
+  fog: false
+});
+
+const buildings = [];
+const buildingCount = state.isMobile ? 50 : 100;
+for (let i = 0; i < buildingCount; i++) {
+  const w = 4 + Math.random() * 8; const h = 20 + Math.random() * 80; const d = 4 + Math.random() * 8;
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mat = buildingMaterial.clone();
+  mat.uniforms = { time: buildingMaterial.uniforms.time, baseColor: { value: new THREE.Color(0x0a0a0f) }, accentColor: { value: buildingColors[Math.floor(Math.random() * buildingColors.length)] }, fogColor: { value: new THREE.Color(0x050507) }, fogDensity: { value: 0.012 } };
+  const mesh = new THREE.Mesh(geo, mat);
+  const angle = (i / buildingCount) * Math.PI * 2; const radius = 20 + Math.random() * 80;
+  mesh.position.x = Math.cos(angle) * radius + (Math.random() - 0.5) * 30;
+  mesh.position.z = Math.sin(angle) * radius - 50 + (Math.random() - 0.5) * 30;
+  mesh.position.y = h / 2 - 10; mesh.rotation.y = Math.random() * Math.PI * 2;
+  cityGroup.add(mesh); buildings.push(mesh);
+}
+
+const particleCount = state.isMobile ? 200 : 500;
+const particleGeo = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(particleCount * 3); const particleColors = new Float32Array(particleCount * 3); const particleSizes = new Float32Array(particleCount); const particleSeeds = new Float32Array(particleCount);
+for (let i = 0; i < particleCount; i++) {
+  particlePositions[i * 3] = (Math.random() - 0.5) * 300; particlePositions[i * 3 + 1] = Math.random() * 100 - 20; particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 300 - 50;
+  const color = buildingColors[Math.floor(Math.random() * buildingColors.length)];
+  particleColors[i * 3] = color.r; particleColors[i * 3 + 1] = color.g; particleColors[i * 3 + 2] = color.b;
+  particleSizes[i] = Math.random() * 3 + 0.5; particleSeeds[i] = Math.random() * 100;
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+particleGeo.setAttribute('aColor', new THREE.BufferAttribute(particleColors, 3));
+particleGeo.setAttribute('aSize', new THREE.BufferAttribute(particleSizes, 1));
+particleGeo.setAttribute('aSeed', new THREE.BufferAttribute(particleSeeds, 1));
+
+const particleMaterial = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0 } },
+  vertexShader: `attribute vec3 aColor; attribute float aSize; attribute float aSeed; uniform float time; varying vec3 vColor; varying float vAlpha; void main() { vColor = aColor; vec3 pos = position; pos.x += sin(time * 0.5 + aSeed) * 3.0; pos.y += cos(time * 0.4 + aSeed * 1.3) * 4.0; pos.z += sin(time * 0.3 + aSeed * 0.7) * 3.0; float angle = time * 0.05 + aSeed * 0.1; float c = cos(angle); float s = sin(angle); pos.xz = mat2(c, -s, s, c) * pos.xz; vec4 mvPos = modelViewMatrix * vec4(pos, 1.0); gl_PointSize = aSize * (200.0 / -mvPos.z); gl_Position = projectionMatrix * mvPos; vAlpha = 1.0 - smoothstep(50.0, 250.0, -mvPos.z); }`,
+  fragmentShader: `varying vec3 vColor; varying float vAlpha; void main() { vec2 uv = gl_PointCoord - 0.5; float d = abs(uv.x) + abs(uv.y); if (d > 0.5) discard; float alpha = (1.0 - d * 2.0) * vAlpha; gl_FragColor = vec4(vColor, alpha * 0.8); }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+});
+const particles = new THREE.Points(particleGeo, particleMaterial); scene.add(particles);
+
+const webGroup = new THREE.Group(); webGroup.position.set(0, 20, -80); scene.add(webGroup);
+
+function createWeb(centerX, centerY, centerZ, size, spokes, rings) {
+  const positions = [];
+  for (let i = 0; i < spokes; i++) {
+    const angle = (i / spokes) * Math.PI * 2; const segs = 20;
+    for (let s = 0; s < segs; s++) {
+      const t1 = s / segs; const t2 = (s + 1) / segs;
+      positions.push(centerX + Math.cos(angle) * size * t1, centerY + Math.sin(angle) * size * t1, centerZ, centerX + Math.cos(angle) * size * t2, centerY + Math.sin(angle) * size * t2, centerZ);
+    }
+  }
+  for (let r = 1; r <= rings; r++) {
+    const radius = (r / rings) * size;
+    for (let i = 0; i < spokes; i++) {
+      const a1 = (i / spokes) * Math.PI * 2; const a2 = ((i + 1) / spokes) * Math.PI * 2; const segs = 4;
+      for (let s = 0; s < segs; s++) {
+        const t1 = s / segs; const t2 = (s + 1) / segs; const am1 = a1 + (a2 - a1) * t1; const am2 = a1 + (a2 - a1) * t2;
+        positions.push(centerX + Math.cos(am1) * radius, centerY + Math.sin(am1) * radius, centerZ, centerX + Math.cos(am2) * radius, centerY + Math.sin(am2) * radius, centerZ);
+      }
+    }
+  }
+  return positions;
+}
+
+const webPositions = [];
+const web1 = createWeb(0, 0, 0, 40, 16, 8); const web2 = createWeb(-60, 10, -30, 30, 14, 6); const web3 = createWeb(70, -5, -20, 35, 16, 7);
+webPositions.push(...web1, ...web2, ...web3);
+const webGeo = new THREE.BufferGeometry();
+webGeo.setAttribute('position', new THREE.Float32BufferAttribute(webPositions, 3));
+const originalPositions = new Float32Array(webPositions);
+webGeo.setAttribute('aOriginal', new THREE.BufferAttribute(originalPositions, 3));
+
+const webMaterial = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0 }, mouse: { value: new THREE.Vector3(0, 0, 0) }, mouseStrength: { value: 0.0 }, colorA: { value: new THREE.Color(0xff003c) }, colorB: { value: new THREE.Color(0x00d4ff) }, colorC: { value: new THREE.Color(0xb026ff) } },
+  vertexShader: `attribute vec3 aOriginal; uniform float time; uniform vec3 mouse; uniform float mouseStrength; varying float vDist; varying float vMouseDist; void main() { vec3 pos = aOriginal; float wind = sin(time * 0.8 + aOriginal.x * 0.1 + aOriginal.y * 0.1) * 0.4; float wind2 = cos(time * 0.5 + aOriginal.y * 0.15) * 0.3; pos.x += wind; pos.y += wind2; pos.z += sin(time * 0.6 + aOriginal.x * 0.2) * 0.2; vec3 toMouse = pos - mouse; float dist = length(toMouse); float force = exp(-dist * 0.08) * mouseStrength * 5.0; pos += normalize(toMouse) * force; vDist = length(aOriginal) * 0.02; vMouseDist = dist; gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); }`,
+  fragmentShader: `uniform float time; uniform vec3 colorA; uniform vec3 colorB; uniform vec3 colorC; varying float vDist; varying float vMouseDist; void main() { float t = sin(time * 0.5 + vDist * 2.0) * 0.5 + 0.5; vec3 c1 = mix(colorA, colorB, t); vec3 c2 = mix(c1, colorC, sin(time * 0.3 + vDist) * 0.5 + 0.5); float mouseGlow = exp(-vMouseDist * 0.05) * 0.5; c2 += vec3(mouseGlow); gl_FragColor = vec4(c2, 0.9); }`,
+  transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const webMesh = new THREE.LineSegments(webGeo, webMaterial); webGroup.add(webMesh);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), state.isMobile ? 0.8 : 1.2, 0.6, 0.2);
+composer.addPass(bloomPass);
+const chromaticPass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, amount: { value: 0.003 } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time; uniform float amount; varying vec2 vUv; void main() { vec2 offset = vec2(0.0); float d = length(vUv - 0.5); offset.x = amount * sin(time * 0.5) * d * 4.0; offset.y = amount * cos(time * 0.3) * d * 4.0; float r = texture2D(tDiffuse, vUv + offset).r; float g = texture2D(tDiffuse, vUv).g; float b = texture2D(tDiffuse, vUv - offset).b; vec3 color = vec3(r, g, b); float scan = sin(vUv.y * 800.0) * 0.02; color -= scan; float vig = 1.0 - d * 0.8; color *= vig; gl_FragColor = vec4(color, 1.0); }`
+});
+composer.addPass(chromaticPass);
+
+const raycaster = new THREE.Raycaster();
+const mousePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 80);
+window.addEventListener('mousemove', (e) => {
+  state.mouse.x = (e.clientX / window.innerWidth) * 2 - 1; state.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(state.mouse, camera);
+  const intersectPoint = new THREE.Vector3();
+  raycaster.ray.intersectPlane(mousePlane, intersectPoint);
+  if (intersectPoint) { intersectPoint.sub(webGroup.position); state.mouseWorld.copy(intersectPoint); }
+});
+window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); });
+
+// Native Smooth Scroll
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.body.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+  state.scroll = progress;
+  document.getElementById('progress-bar').style.width = (progress * 100) + '%';
+  const sections = 5;
+  const activeIdx = Math.min(sections - 1, Math.floor(progress * sections));
+  document.querySelectorAll('.nav-dot').forEach((dot, i) => { dot.classList.toggle('active', i === activeIdx); });
+});
+
+const clock = new THREE.Clock(); let targetMouseStrength = 0;
+function animate() {
+  requestAnimationFrame(animate); const delta = clock.getDelta(); state.time += delta;
+  buildingMaterial.uniforms.time.value = state.time;
+  buildings.forEach(b => { if (b.material.uniforms) b.material.uniforms.time.value = state.time; });
+  particleMaterial.uniforms.time.value = state.time; webMaterial.uniforms.time.value = state.time; chromaticPass.uniforms.time.value = state.time;
+  webMaterial.uniforms.mouse.value.copy(state.mouseWorld);
+  targetMouseStrength = Math.min(1, Math.abs(state.mouse.x) + Math.abs(state.mouse.y));
+  webMaterial.uniforms.mouseStrength.value += (targetMouseStrength * 0.5 - webMaterial.uniforms.mouseStrength.value) * 0.05;
+  const targetCamX = state.mouse.x * 8; const targetCamY = 25 + state.mouse.y * 4;
+  camera.position.x += (targetCamX - camera.position.x) * 0.03; camera.position.y += (targetCamY - camera.position.y) * 0.03;
+  const scrollProgress = state.scroll;
+  if (scrollProgress < 0.2) { const t = scrollProgress / 0.2; camera.position.z = 100 - t * 60; camera.position.y = 25 + Math.sin(t * Math.PI) * 10; camera.rotation.y = t * 0.2; camera.rotation.x = -t * 0.1; }
+  else if (scrollProgress < 0.4) { const t = (scrollProgress - 0.2) / 0.2; camera.position.z = 40 - t * 40; camera.position.y = 35 - t * 15; camera.rotation.y = 0.2 + t * 0.3; camera.rotation.x = -0.1 + t * 0.2; }
+  else if (scrollProgress < 0.6) { const t = (scrollProgress - 0.4) / 0.2; camera.position.z = 0 + Math.sin(t * Math.PI * 0.5) * 30; camera.position.x = Math.sin(t * Math.PI * 0.5) * 40; camera.rotation.y = 0.5 + t * 0.8; camera.rotation.x = 0.1 - t * 0.2; }
+  else if (scrollProgress < 0.8) { const t = (scrollProgress - 0.6) / 0.2; camera.position.y = 20 + t * 50; camera.position.z = 30 - t * 30; camera.rotation.y = 1.3 + t * 0.5; camera.rotation.x = -0.1 - t * 0.4; }
+  else { const t = (scrollProgress - 0.8) / 0.2; camera.position.z = 0 + t * 80; camera.position.y = 70 - t * 20; camera.rotation.y = 1.8 - t * 0.3; camera.rotation.x = -0.5 + t * 0.2; }
+  camera.lookAt(0, 20, -50);
+  cityGroup.rotation.y = state.time * 0.02;
+  crimsonLight.position.x = Math.sin(state.time * 0.5) * 80; crimsonLight.position.z = Math.cos(state.time * 0.5) * 80 - 50;
+  blueLight.position.x = Math.sin(state.time * 0.5 + Math.PI) * 80; blueLight.position.z = Math.cos(state.time * 0.5 + Math.PI) * 80 - 50;
+  purpleLight.position.y = 40 + Math.sin(state.time * 0.3) * 20;
+  composer.render();
+}
+animate();
+
+const cursorDot = document.getElementById('cursor-dot'); const cursorRing = document.getElementById('cursor-ring'); const trailCanvas = document.getElementById('web-trail-canvas'); const trailCtx = trailCanvas.getContext('2d');
+function resizeTrail() { trailCanvas.width = window.innerWidth; trailCanvas.height = window.innerHeight; }
+resizeTrail(); window.addEventListener('resize', resizeTrail);
+let cursorX = window.innerWidth / 2; let cursorY = window.innerHeight / 2; let ringX = cursorX; let ringY = cursorY;
+const trailPoints = []; const maxTrailPoints = 25;
+window.addEventListener('mousemove', (e) => { cursorX = e.clientX; cursorY = e.clientY; cursorDot.style.left = cursorX + 'px'; cursorDot.style.top = cursorY + 'px'; trailPoints.push({ x: cursorX, y: cursorY, life: 1 }); if (trailPoints.length > maxTrailPoints) trailPoints.shift(); });
+function updateCursor() {
+  ringX += (cursorX - ringX) * 0.15; ringY += (cursorY - ringY) * 0.15; cursorRing.style.left = ringX + 'px'; cursorRing.style.top = ringY + 'px';
+  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  if (trailPoints.length > 1) {
+    trailCtx.beginPath(); trailCtx.moveTo(trailPoints[0].x, trailPoints[0].y);
+    for (let i = 1; i < trailPoints.length; i++) trailCtx.lineTo(trailPoints[i].x, trailPoints[i].y);
+    const grad = trailCtx.createLinearGradient(trailPoints[0].x, trailPoints[0].y, trailPoints[trailPoints.length - 1].x, trailPoints[trailPoints.length - 1].y);
+    grad.addColorStop(0, 'rgba(255, 0, 60, 0)'); grad.addColorStop(0.5, 'rgba(255, 0, 60, 0.3)'); grad.addColorStop(1, 'rgba(0, 212, 255, 0.8)');
+    trailCtx.strokeStyle = grad; trailCtx.lineWidth = 1.5; trailCtx.stroke();
+    for (let i = 0; i < trailPoints.length; i += 3) { for (let j = i + 2; j < trailPoints.length; j += 4) { const dx = trailPoints[j].x - trailPoints[i].x; const dy = trailPoints[j].y - trailPoints[i].y; const dist = Math.sqrt(dx * dx + dy * dy); if (dist < 100 && dist > 10) { trailCtx.beginPath(); trailCtx.moveTo(trailPoints[i].x, trailPoints[i].y); trailCtx.lineTo(trailPoints[j].x, trailPoints[j].y); trailCtx.strokeStyle = `rgba(255, 255, 255, ${0.15 * (1 - dist / 100)})`; trailCtx.lineWidth = 0.5; trailCtx.stroke(); } } }
+    for (let i = trailPoints.length - 1; i >= 0; i--) { trailPoints[i].life -= 0.02; if (trailPoints[i].life <= 0) trailPoints.splice(i, 1); }
+  }
+  requestAnimationFrame(updateCursor);
+}
+updateCursor();
+
+document.querySelectorAll('.magnetic').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursorRing.classList.add('hover-active'); if (window.audioEngine) window.audioEngine.playHover(); });
+  el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover-active'));
+  el.addEventListener('mousemove', (e) => { const rect = el.getBoundingClientRect(); const x = e.clientX - rect.left - rect.width / 2; const y = e.clientY - rect.top - rect.height / 2; gsap.to(el, { x: x * 0.2, y: y * 0.2, duration: 0.6, ease: 'power3.out' }); });
+  el.addEventListener('mouseleave', () => { gsap.to(el, { x: 0, y: 0, duration: 0.8, ease: 'elastic.out(1, 0.3)' }); });
+});
+document.querySelectorAll('.nav-dot, .audio-toggle').forEach(el => { el.addEventListener('mouseenter', () => cursorRing.classList.add('hover-active')); el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover-active')); });
+
+class AudioEngine {
+  constructor() { this.ctx = null; this.master = null; this.muted = true; this.initialized = false; }
+  init() { if (this.initialized) return; try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.master = this.ctx.createGain(); this.master.gain.value = 0; this.master.connect(this.ctx.destination); this.startAmbient(); this.initialized = true; } catch (e) { console.warn('Audio init failed', e); } }
+  startAmbient() { const osc1 = this.ctx.createOscillator(); osc1.frequency.value = 55; osc1.type = 'sawtooth'; const osc2 = this.ctx.createOscillator(); osc2.frequency.value = 82; osc2.type = 'sine'; const osc3 = this.ctx.createOscillator(); osc3.frequency.value = 110; osc3.type = 'triangle'; const filter = this.ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 400; filter.Q.value = 8; const gain = this.ctx.createGain(); gain.gain.value = 0.15; const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.08; const lfoGain = this.ctx.createGain(); lfoGain.gain.value = 200; lfo.connect(lfoGain); lfoGain.connect(filter.frequency); osc1.connect(filter); osc2.connect(filter); osc3.connect(filter); filter.connect(gain); gain.connect(this.master); osc1.start(); osc2.start(); osc3.start(); lfo.start(); }
+  playHover() { if (!this.initialized || this.muted) return; const osc = this.ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 600; osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.08); const gain = this.ctx.createGain(); gain.gain.value = 0; gain.gain.linearRampToValueAtTime(0.08, this.ctx.currentTime + 0.01); gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15); osc.connect(gain); gain.connect(this.master); osc.start(); osc.stop(this.ctx.currentTime + 0.2); }
+  playShoot() { if (!this.initialized || this.muted) return; const bufferSize = this.ctx.sampleRate * 0.25; const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate); const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2); const source = this.ctx.createBufferSource(); source.buffer = buffer; const filter = this.ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 3000; filter.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.25); filter.Q.value = 8; const gain = this.ctx.createGain(); gain.gain.value = 0.2; source.connect(filter); filter.connect(gain); gain.connect(this.master); source.start(); }
+  toggleMute() { if (!this.initialized) this.init(); this.muted = !this.muted; if (this.master) this.master.gain.linearRampToValueAtTime(this.muted ? 0 : 0.4, this.ctx.currentTime + 0.3); return this.muted; }
+}
+window.audioEngine = new AudioEngine();
+const audioToggle = document.getElementById('audio-toggle');
+audioToggle.addEventListener('click', () => { const muted = window.audioEngine.toggleMute(); audioToggle.classList.toggle('muted', muted); });
+
+document.querySelectorAll('.nav-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    const idx = parseInt(dot.dataset.section);
+    const target = document.getElementById(`section-${idx}`);
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+gsap.registerPlugin(ScrollTrigger);
+gsap.from('.hero-section .title-wrap', { scrollTrigger: { trigger: '.hero-section', start: 'top top' }, y: 100, opacity: 0, duration: 1.5, stagger: 0.2, ease: 'power4.out' });
+gsap.from('.hero-section .speech-bubble, .hero-section p, .hero-section .cta-button', { scrollTrigger: { trigger: '.hero-section', start: 'top top' }, y: 50, opacity: 0, duration: 1.2, stagger: 0.15, delay: 0.5, ease: 'power3.out' });
+gsap.to('.hero-section .section-content', { scrollTrigger: { trigger: '.hero-section', start: 'top top', end: 'bottom top', scrub: 1 }, y: -200, opacity: 0, scale: 0.9 });
+gsap.from('.web-section .speech-bubble, .web-section h2, .web-section p', { scrollTrigger: { trigger: '.web-section', start: 'top 70%', end: 'top 30%', scrub: 1 }, y: 80, opacity: 0, stagger: 0.2 });
+gsap.from('.web-section .grid > div, .web-section .comic-burst', { scrollTrigger: { trigger: '.web-section', start: 'top 60%' }, scale: 0.5, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'back.out(1.7)' });
+gsap.from('.panels-section h2, .panels-section > .section-content > div > .speech-bubble, .panels-section > .section-content > div > p', { scrollTrigger: { trigger: '.panels-section', start: 'top 70%' }, y: 60, opacity: 0, duration: 1, stagger: 0.15, ease: 'power3.out' });
+gsap.from('.panel-item', { scrollTrigger: { trigger: '.panels-grid', start: 'top 80%' }, scale: 0.3, opacity: 0, rotation: () => (Math.random() - 0.5) * 60, duration: 1, stagger: 0.1, ease: 'back.out(1.5)' });
+gsap.from('.multiverse-section .speech-bubble, .multiverse-section h2, .multiverse-section p, .multiverse-section .space-y-4 > div', { scrollTrigger: { trigger: '.multiverse-section', start: 'top 70%' }, y: 80, opacity: 0, duration: 1, stagger: 0.15, ease: 'power3.out' });
+gsap.from('.multiverse-section .grid > div', { scrollTrigger: { trigger: '.multiverse-section', start: 'top 60%' }, scale: 0, opacity: 0, duration: 0.8, stagger: 0.15, ease: 'back.out(2)' });
+gsap.from('.final-section .comic-burst, .final-section .title-wrap, .final-section p, .final-section .cta-button', { scrollTrigger: { trigger: '.final-section', start: 'top 60%' }, y: 100, opacity: 0, duration: 1.2, stagger: 0.2, ease: 'power4.out' });
+gsap.from('.final-section .grid > div', { scrollTrigger: { trigger: '.final-section', start: 'top 40%' }, y: 50, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out' });
+
+const loader = document.getElementById('loader'); const loaderPercent = document.getElementById('loader-percent'); const loaderBurst = document.getElementById('loader-burst');
+let progress = 0;
+const loadInterval = setInterval(() => {
+  progress += Math.random() * 8 + 2;
+  if (progress >= 100) {
+    progress = 100; clearInterval(loadInterval); loaderPercent.textContent = '100%';
+    setTimeout(() => {
+      gsap.to(loaderBurst, { opacity: 1, duration: 0.2 });
+      gsap.to(loader, { scale: 1.5, opacity: 0, duration: 0.8, ease: 'power3.in', onComplete: () => { loader.classList.add('hidden'); gsap.fromTo('.hero-section .title-wrap', { opacity: 0, y: 80, filter: 'blur(20px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1.5, stagger: 0.2, ease: 'power4.out' }); } });
+    }, 300);
+  } else { loaderPercent.textContent = Math.floor(progress).toString().padStart(2, '0') + '%'; }
+  document.querySelector('.loader-progress').style.setProperty('--progress', progress + '%');
+}, 100);
+
+document.getElementById('hero-cta').addEventListener('click', () => {
+  document.getElementById('section-1').scrollIntoView({ behavior: 'smooth' });
+});
+
+document.getElementById('final-cta').addEventListener('click', () => {
+  gsap.to('.final-section .title-wrap', { scale: 1.2, duration: 0.5, yoyo: true, repeat: 1, ease: 'power2.inOut' });
+  for (let i = 0; i < 30; i++) {
+    const particle = document.createElement('div');
+    particle.style.position = 'fixed'; particle.style.left = '50%'; particle.style.top = '50%'; particle.style.width = '8px'; particle.style.height = '8px';
+    particle.style.background = ['#ff003c', '#00d4ff', '#b026ff', '#ffea00'][i % 4]; particle.style.borderRadius = '50%'; particle.style.pointerEvents = 'none'; particle.style.zIndex = '9999';
+    document.body.appendChild(particle);
+    const angle = (i / 30) * Math.PI * 2; const dist = 200 + Math.random() * 200;
+    gsap.to(particle, { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, duration: 1.5, ease: 'power3.out', onComplete: () => particle.remove() });
+  }
+  if (window.audioEngine) window.audioEngine.playShoot();
+});
+</script>
+
+</body>
+</html>
